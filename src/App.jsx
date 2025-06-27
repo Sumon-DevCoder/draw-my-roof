@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Search, MapPin, Send, Trash2, Info } from "lucide-react";
+import { Search, MapPin, Send, Trash2, Info, Camera } from "lucide-react";
 import mapboxgl from "mapbox-gl";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import toast from "react-hot-toast";
@@ -20,6 +20,8 @@ const App = () => {
   const [roofCoordinates, setRoofCoordinates] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState("");
+  const [roofImage, setRoofImage] = useState(null);
+  const [isCapturingImage, setIsCapturingImage] = useState(false);
 
   // Replace with your actual Mapbox token
   const MAPBOX_TOKEN =
@@ -43,6 +45,7 @@ const App = () => {
       style: "mapbox://styles/mapbox/satellite-streets-v12",
       center: [lng, lat],
       zoom: zoom,
+      preserveDrawingBuffer: true, // This is important for capturing images
     });
 
     // Initialize drawing tools
@@ -76,8 +79,47 @@ const App = () => {
     if (data.features.length > 0) {
       const polygon = data.features[0];
       setRoofCoordinates(polygon.geometry.coordinates[0]);
+      // Automatically capture image when roof is drawn
+      setTimeout(() => captureRoofImage(), 500);
     } else {
       setRoofCoordinates(null);
+      setRoofImage(null);
+    }
+  };
+
+  const captureRoofImage = () => {
+    if (!map.current) return;
+
+    setIsCapturingImage(true);
+
+    try {
+      // Get the canvas from the map
+      const canvas = map.current.getCanvas();
+
+      // Convert canvas to blob
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            // Convert blob to base64
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              setRoofImage(reader.result);
+              setIsCapturingImage(false);
+              toast.success("📷 Roof image captured!");
+            };
+            reader.readAsDataURL(blob);
+          } else {
+            setIsCapturingImage(false);
+            toast.error("Failed to capture image");
+          }
+        },
+        "image/png",
+        0.8
+      );
+    } catch (error) {
+      console.error("Error capturing image:", error);
+      setIsCapturingImage(false);
+      toast.error("Error capturing image");
     }
   };
 
@@ -117,6 +159,7 @@ const App = () => {
     if (draw.current) {
       draw.current.deleteAll();
       setRoofCoordinates(null);
+      setRoofImage(null);
     }
   };
 
@@ -137,7 +180,11 @@ const App = () => {
         lng: parseFloat(lng),
         lat: parseFloat(lat),
       }),
+      roofImage: roofImage || "", // Include the base64 image data
+      hasImage: roofImage ? "true" : "false",
     };
+
+    console.log("submit data", submitData);
 
     try {
       const webhookUrl =
@@ -157,10 +204,10 @@ const App = () => {
         body: formData.toString(),
       });
 
-      console.log("rr", response);
+      console.log("Response:", response);
 
       if (response.ok) {
-        toast.success("✅ Roof data submitted successfully!");
+        toast.success("✅ Roof data and image submitted successfully!");
         clearDrawing();
         setSelectedAddress("");
         setSearchQuery("");
@@ -228,10 +275,39 @@ const App = () => {
             {lng}, {lat}
           </div>
         </div>
+
+        {/* Capture Image Button */}
+        <div className="absolute top-2 sm:top-4 right-2 sm:right-4">
+          <button
+            onClick={captureRoofImage}
+            disabled={isCapturingImage}
+            className="flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm bg-blue-600 text-white rounded shadow-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+          >
+            <Camera className="h-3 w-3 sm:h-4 sm:w-4" />
+            {isCapturingImage ? "Capturing..." : "Capture"}
+          </button>
+        </div>
       </div>
 
       {/* Bottom Controls */}
       <div className="bg-white border-t p-3 sm:p-4 md:p-6">
+        {/* Image Preview */}
+        {roofImage && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <Camera className="h-4 w-4 text-blue-600" />
+              <span className="text-sm font-medium text-blue-800">
+                Roof Image Captured
+              </span>
+            </div>
+            <img
+              src={roofImage}
+              alt="Captured roof"
+              className="w-full max-w-xs h-auto rounded border"
+            />
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
           <button
             onClick={clearDrawing}
@@ -240,6 +316,25 @@ const App = () => {
             <Trash2 className="h-4 w-4" />
             <span className="hidden sm:inline">Clear Drawing</span>
             <span className="sm:hidden">Clear</span>
+          </button>
+
+          <button
+            onClick={captureRoofImage}
+            disabled={isCapturingImage || !roofCoordinates}
+            className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base bg-purple-600 text-white rounded-lg hover:bg-purple-700 active:bg-purple-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+          >
+            <Camera className="h-4 w-4" />
+            {isCapturingImage ? (
+              <>
+                <span className="hidden sm:inline">Capturing...</span>
+                <span className="sm:hidden">Wait...</span>
+              </>
+            ) : (
+              <>
+                <span className="hidden sm:inline">Capture Image</span>
+                <span className="sm:hidden">Capture</span>
+              </>
+            )}
           </button>
 
           <button
@@ -274,6 +369,7 @@ const App = () => {
           <div className="mt-3 p-2 sm:p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-xs sm:text-sm font-medium text-yellow-800 mb-2">
               Roof Outline Captured ({roofCoordinates.length} points)
+              {roofImage && " + Image 📷"}
             </p>
             <div className="text-xs text-yellow-700 max-h-16 sm:max-h-20 overflow-y-auto break-all">
               {roofCoordinates.map((coord, idx) => (
