@@ -1,8 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Search, MapPin, Send, Trash2, Info } from "lucide-react";
+import mapboxgl from "mapbox-gl";
+import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import toast from "react-hot-toast";
 
-// working perfect
+// Import CSS files
+import "mapbox-gl/dist/mapbox-gl.css";
+import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 
 const App = () => {
   const mapContainer = useRef(null);
@@ -22,33 +26,7 @@ const App = () => {
     "pk.eyJ1Ijoic2FtLW5pcnZhbmEiLCJhIjoiY21iNWNscGdwMDlkbzJqcXMwN2tlMDBmcSJ9.-HYpRdFSd_dGCidq1_6ZlQ";
 
   useEffect(() => {
-    // Load Mapbox GL JS and Mapbox Draw from CDN
-    if (!window.mapboxgl) {
-      const mapboxScript = document.createElement("script");
-      mapboxScript.src =
-        "https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js";
-      mapboxScript.onload = initializeMap;
-      document.head.appendChild(mapboxScript);
-
-      const mapboxCSS = document.createElement("link");
-      mapboxCSS.href =
-        "https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css";
-      mapboxCSS.rel = "stylesheet";
-      document.head.appendChild(mapboxCSS);
-
-      const drawCSS = document.createElement("link");
-      drawCSS.href =
-        "https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.css";
-      drawCSS.rel = "stylesheet";
-      document.head.appendChild(drawCSS);
-
-      const drawScript = document.createElement("script");
-      drawScript.src =
-        "https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.js";
-      document.head.appendChild(drawScript);
-    } else {
-      initializeMap();
-    }
+    initializeMap();
 
     return () => {
       if (map.current) map.current.remove();
@@ -56,11 +34,11 @@ const App = () => {
   }, []);
 
   const initializeMap = () => {
-    if (!window.mapboxgl || !mapContainer.current) return;
+    if (!mapContainer.current) return;
 
-    window.mapboxgl.accessToken = MAPBOX_TOKEN;
+    mapboxgl.accessToken = MAPBOX_TOKEN;
 
-    map.current = new window.mapboxgl.Map({
+    map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: "mapbox://styles/mapbox/satellite-streets-v12",
       center: [lng, lat],
@@ -68,23 +46,21 @@ const App = () => {
     });
 
     // Initialize drawing tools
-    if (window.MapboxDraw) {
-      draw.current = new window.MapboxDraw({
-        displayControlsDefault: false,
-        controls: {
-          polygon: true,
-          trash: true,
-        },
-        defaultMode: "draw_polygon",
-      });
+    draw.current = new MapboxDraw({
+      displayControlsDefault: false,
+      controls: {
+        polygon: true,
+        trash: true,
+      },
+      defaultMode: "draw_polygon",
+    });
 
-      map.current.addControl(draw.current);
+    map.current.addControl(draw.current);
 
-      // Listen for drawing events
-      map.current.on("draw.create", updateRoofCoordinates);
-      map.current.on("draw.delete", updateRoofCoordinates);
-      map.current.on("draw.update", updateRoofCoordinates);
-    }
+    // Listen for drawing events
+    map.current.on("draw.create", updateRoofCoordinates);
+    map.current.on("draw.delete", updateRoofCoordinates);
+    map.current.on("draw.update", updateRoofCoordinates);
 
     map.current.on("move", () => {
       setLng(map.current.getCenter().lng.toFixed(4));
