@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { Search, MapPin, Send, Trash2, Info } from "lucide-react";
 import toast from "react-hot-toast";
 
+// working perfect
+
 const App = () => {
   const mapContainer = useRef(null);
   const map = useRef(null);
