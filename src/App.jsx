@@ -307,7 +307,7 @@ const App = () => {
         if (map.current) {
           map.current.flyTo({
             center: [longitude, latitude],
-            zoom: 18,
+            zoom: 20,
             duration: 2000,
           });
         }
