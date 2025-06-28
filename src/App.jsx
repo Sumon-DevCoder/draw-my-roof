@@ -38,8 +38,7 @@ const App = () => {
   const [customerPhone, setCustomerPhone] = useState("");
 
   // Replace with your actual Mapbox token
-  const MAPBOX_TOKEN =
-    "pk.eyJ1Ijoic2FtLW5pcnZhbmEiLCJhIjoiY21iNWNscGdwMDlkbzJqcXMwN2tlMDBmcSJ9.-HYpRdFSd_dGCidq1_6ZlQ";
+  const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
   useEffect(() => {
     initializeMap();
@@ -376,9 +375,7 @@ const App = () => {
     console.log("submit data", submitData);
 
     try {
-      const webhookUrl =
-        // "https://hooks.zapier.com/hooks/catch/22744726/2jzn64e/";
-        "https://hooks.zapier.com/hooks/catch/22587664/ub8dodz/";
+      const webhookUrl = import.meta.env.REACT_APP_ZAPIER_WEBHOOK;
 
       // Convert to URL-encoded format
       const formData = new URLSearchParams();
