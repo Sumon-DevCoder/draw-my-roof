@@ -70,6 +70,53 @@ const App = () => {
         trash: true,
       },
       defaultMode: "draw_polygon",
+      styles: [
+        {
+          id: "gl-draw-polygon-fill",
+          type: "fill",
+          filter: ["all", ["==", "$type", "Polygon"], ["!=", "mode", "static"]],
+          paint: {
+            "fill-color": "#ff4d4d", // Bright red fill
+            "fill-opacity": 0.2,
+          },
+        },
+        {
+          id: "gl-draw-polygon-stroke-active",
+          type: "line",
+          filter: ["all", ["==", "$type", "Polygon"], ["!=", "mode", "static"]],
+          paint: {
+            "line-color": "#cc0000", // Deep red stroke
+            "line-width": 4,
+          },
+        },
+        {
+          id: "gl-draw-polygon-midpoint",
+          type: "circle",
+          filter: ["all", ["==", "$type", "Point"], ["==", "meta", "midpoint"]],
+          paint: {
+            "circle-radius": 5,
+            "circle-color": "#ff4d4d",
+          },
+        },
+        {
+          id: "gl-draw-polygon-and-line-vertex-halo-active",
+          type: "circle",
+          filter: ["all", ["==", "meta", "vertex"], ["==", "$type", "Point"]],
+          paint: {
+            "circle-radius": 7,
+            "circle-color": "#fff",
+          },
+        },
+        {
+          id: "gl-draw-polygon-and-line-vertex-active",
+          type: "circle",
+          filter: ["all", ["==", "meta", "vertex"], ["==", "$type", "Point"]],
+          paint: {
+            "circle-radius": 5,
+            "circle-color": "#cc0000", // Deep red vertices
+          },
+        },
+      ],
     });
 
     map.current.addControl(draw.current);
