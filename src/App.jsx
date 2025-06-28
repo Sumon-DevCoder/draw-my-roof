@@ -101,6 +101,62 @@ const App = () => {
     }
   };
 
+  // const captureRoofImage = () => {
+  //   if (!map.current) return;
+
+  //   setIsCapturingImage(true);
+
+  //   try {
+  //     // Get the canvas from the map
+  //     const canvas = map.current.getCanvas();
+
+  //     // Create a new canvas with reduced size
+  //     const maxWidth = 800; // Reduced from full size
+  //     const maxHeight = 600; // Reduced from full size
+
+  //     const newCanvas = document.createElement("canvas");
+  //     const ctx = newCanvas.getContext("2d");
+
+  //     // Calculate scaling to maintain aspect ratio
+  //     const scale = Math.min(
+  //       maxWidth / canvas.width,
+  //       maxHeight / canvas.height
+  //     );
+
+  //     newCanvas.width = canvas.width * scale;
+  //     newCanvas.height = canvas.height * scale;
+
+  //     // Draw the scaled image
+  //     ctx.drawImage(canvas, 0, 0, newCanvas.width, newCanvas.height);
+
+  //     // Convert canvas to blob
+  //     canvas.toBlob(
+  //       (blob) => {
+  //         if (blob) {
+  //           // Convert blob to base64
+  //           const reader = new FileReader();
+  //           reader.onloadend = () => {
+  //             setRoofImage(reader.result);
+  //             setIsCapturingImage(false);
+  //             // Toast notification would go here
+  //           };
+  //           reader.readAsDataURL(blob);
+  //         } else {
+  //           setIsCapturingImage(false);
+  //           // Error toast would go here
+  //         }
+  //       },
+  //       "image/png",
+  //       0.8
+  //     );
+  //   } catch (error) {
+  //     console.error("Error capturing image:", error);
+  //     setIsCapturingImage(false);
+  //     // Error toast would go here
+  //   }
+  // };
+
+  // Replace your captureRoofImage function with this optimized version
   const captureRoofImage = () => {
     if (!map.current) return;
 
@@ -110,8 +166,27 @@ const App = () => {
       // Get the canvas from the map
       const canvas = map.current.getCanvas();
 
-      // Convert canvas to blob
-      canvas.toBlob(
+      // Create a new canvas with reduced size
+      const maxWidth = 800; // Reduced from full size
+      const maxHeight = 600; // Reduced from full size
+
+      const newCanvas = document.createElement("canvas");
+      const ctx = newCanvas.getContext("2d");
+
+      // Calculate scaling to maintain aspect ratio
+      const scale = Math.min(
+        maxWidth / canvas.width,
+        maxHeight / canvas.height
+      );
+
+      newCanvas.width = canvas.width * scale;
+      newCanvas.height = canvas.height * scale;
+
+      // Draw the scaled image
+      ctx.drawImage(canvas, 0, 0, newCanvas.width, newCanvas.height);
+
+      // Convert to blob with higher compression
+      newCanvas.toBlob(
         (blob) => {
           if (blob) {
             // Convert blob to base64
@@ -119,21 +194,19 @@ const App = () => {
             reader.onloadend = () => {
               setRoofImage(reader.result);
               setIsCapturingImage(false);
-              // Toast notification would go here
+              console.log("Image size (bytes):", reader.result.length);
             };
             reader.readAsDataURL(blob);
           } else {
             setIsCapturingImage(false);
-            // Error toast would go here
           }
         },
-        "image/png",
-        0.8
+        "image/jpeg", // Use JPEG instead of PNG for better compression
+        0.7 // Reduced quality for smaller file size
       );
     } catch (error) {
       console.error("Error capturing image:", error);
       setIsCapturingImage(false);
-      // Error toast would go here
     }
   };
 
@@ -228,7 +301,8 @@ const App = () => {
 
     try {
       const webhookUrl =
-        "https://hooks.zapier.com/hooks/catch/22744726/2jzn64e/";
+        // "https://hooks.zapier.com/hooks/catch/22744726/2jzn64e/";
+        "https://hooks.zapier.com/hooks/catch/22587664/ub8dodz/";
 
       // Convert to URL-encoded format
       const formData = new URLSearchParams();
