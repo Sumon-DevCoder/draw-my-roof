@@ -32,7 +32,7 @@ const App = () => {
   const [roofImage, setRoofImage] = useState(null);
   const [isCapturingImage, setIsCapturingImage] = useState(false);
 
-  // New contact
+  // New contact fields
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -375,7 +375,7 @@ const App = () => {
     console.log("submit data", submitData);
 
     try {
-      const webhookUrl = import.meta.env.REACT_APP_ZAPIER_WEBHOOK;
+      const webhookUrl = import.meta.env.VITE_ZAPIER_WEBHOOK;
 
       // Convert to URL-encoded format
       const formData = new URLSearchParams();
