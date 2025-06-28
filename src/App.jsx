@@ -32,7 +32,7 @@ const App = () => {
   const [roofImage, setRoofImage] = useState(null);
   const [isCapturingImage, setIsCapturingImage] = useState(false);
 
-  // New contact fields
+  // New contact
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
