@@ -31,6 +31,7 @@ const App = () => {
   const [submitStatus, setSubmitStatus] = useState("");
   const [roofImage, setRoofImage] = useState(null);
   const [isCapturingImage, setIsCapturingImage] = useState(false);
+  const [ridgeLineCoordinates, setRidgeLineCoordinates] = useState(null);
 
   // New contact fields
   const [customerName, setCustomerName] = useState("");
@@ -61,87 +62,107 @@ const App = () => {
       preserveDrawingBuffer: true, // This is important for capturing images
     });
 
-    // Initialize drawing tools
-    // draw.current = new MapboxDraw({
-    //   displayControlsDefault: false,
-    //   controls: {
-    //     polygon: true,
-    //     trash: true,
-    //   },
-    //   defaultMode: "draw_polygon",
-    //   styles: [
-    //     {
-    //       id: "gl-draw-polygon-fill",
-    //       type: "fill",
-    //       filter: ["all", ["==", "$type", "Polygon"], ["!=", "mode", "static"]],
-    //       paint: {
-    //         "fill-color": "#ff4d4d", // Bright red fill
-    //         "fill-opacity": 0.2,
-    //       },
-    //     },
-    //     {
-    //       id: "gl-draw-polygon-stroke-active",
-    //       type: "line",
-    //       filter: ["all", ["==", "$type", "Polygon"], ["!=", "mode", "static"]],
-    //       paint: {
-    //         "line-color": "#cc0000", // Deep red stroke
-    //         "line-width": 4,
-    //       },
-    //     },
-    //     {
-    //       id: "gl-draw-polygon-midpoint",
-    //       type: "circle",
-    //       filter: ["all", ["==", "$type", "Point"], ["==", "meta", "midpoint"]],
-    //       paint: {
-    //         "circle-radius": 5,
-    //         "circle-color": "#ff4d4d",
-    //       },
-    //     },
-    //     {
-    //       id: "gl-draw-polygon-and-line-vertex-halo-active",
-    //       type: "circle",
-    //       filter: ["all", ["==", "meta", "vertex"], ["==", "$type", "Point"]],
-    //       paint: {
-    //         "circle-radius": 7,
-    //         "circle-color": "#fff",
-    //       },
-    //     },
-    //     {
-    //       id: "gl-draw-polygon-and-line-vertex-active",
-    //       type: "circle",
-    //       filter: ["all", ["==", "meta", "vertex"], ["==", "$type", "Point"]],
-    //       paint: {
-    //         "circle-radius": 5,
-    //         "circle-color": "#cc0000", // Deep red vertices
-    //       },
-    //     },
-    //   ],
-    // });
-
     draw.current = new MapboxDraw({
       displayControlsDefault: false,
       controls: {
         polygon: true,
+        line_string: true, // ✅ Enable ridge drawing
         trash: true,
       },
       defaultMode: "draw_polygon",
+      // styles: [
+      //   // Polygon stroke
+      //   {
+      //     id: "gl-draw-polygon-stroke-active",
+      //     type: "line",
+      //     filter: ["all", ["==", "$type", "Polygon"], ["!=", "mode", "static"]],
+      //     paint: {
+      //       "line-color": "#e60000",
+      //       "line-width": 4,
+      //     },
+      //   },
+      //   // Polygon points
+      //   {
+      //     id: "gl-draw-polygon-and-line-vertex-active",
+      //     type: "circle",
+      //     filter: ["all", ["==", "meta", "vertex"], ["==", "$type", "Point"]],
+      //     paint: {
+      //       "circle-radius": 5,
+      //       "circle-color": "#e60000",
+      //     },
+      //   },
+      //   // ✅ Ridge line (LineString) stroke
+      //   {
+      //     id: "gl-draw-line-stroke-active",
+      //     type: "line",
+      //     filter: [
+      //       "all",
+      //       ["==", "$type", "LineString"],
+      //       ["!=", "mode", "static"],
+      //     ],
+      //     paint: {
+      //       "line-color": "#00cc66", // 🟢 Green ridge line
+      //       "line-width": 3,
+      //     },
+      //   },
+      // ],
+
       styles: [
+        // 🟥 Polygon stroke (red border)
         {
           id: "gl-draw-polygon-stroke-active",
           type: "line",
           filter: ["all", ["==", "$type", "Polygon"], ["!=", "mode", "static"]],
           paint: {
-            "line-color": "#e60000", // Deep red
+            "line-color": "#e60000",
             "line-width": 4,
           },
         },
+
+        // 🟥 Polygon vertices (red dots)
         {
-          id: "gl-draw-polygon-and-line-vertex-active",
+          id: "gl-draw-polygon-vertex-active",
           type: "circle",
-          filter: ["all", ["==", "meta", "vertex"], ["==", "$type", "Point"]],
+          filter: [
+            "all",
+            ["==", "meta", "vertex"],
+            ["==", "$type", "Point"],
+            ["==", "mode", "draw_polygon"],
+          ],
           paint: {
             "circle-radius": 5,
-            "circle-color": "#e60000", // Red corner points
+            "circle-color": "#e60000",
+          },
+        },
+
+        // ✅ Ridge line stroke (green line)
+        {
+          id: "gl-draw-line-stroke-active",
+          type: "line",
+          filter: [
+            "all",
+            ["==", "$type", "LineString"],
+            ["!=", "mode", "static"],
+          ],
+          paint: {
+            "line-color": "#00cc66", // Green ridge line
+            "line-width": 3,
+          },
+        },
+
+        // ❌ Hide ridge line (LineString) vertices
+        {
+          id: "gl-draw-line-vertex-hidden",
+          type: "circle",
+          filter: [
+            "all",
+            ["==", "meta", "vertex"],
+            ["==", "$type", "Point"],
+            ["==", "mode", "draw_line_string"],
+          ],
+          paint: {
+            "circle-radius": 0.01,
+            "circle-opacity": 0,
           },
         },
       ],
@@ -165,90 +186,52 @@ const App = () => {
     if (!draw.current) return;
 
     const data = draw.current.getAll();
-    if (data.features.length > 0) {
-      const polygon = data.features[0];
-      setRoofCoordinates(polygon.geometry.coordinates[0]);
-      // Automatically capture image when roof is drawn
-      setTimeout(() => captureRoofImage(), 500);
+
+    const polygonFeature = data.features.find(
+      (f) => f.geometry.type === "Polygon"
+    );
+    const ridgeFeature = data.features.find(
+      (f) => f.geometry.type === "LineString"
+    );
+
+    if (polygonFeature) {
+      setRoofCoordinates(polygonFeature.geometry.coordinates[0]);
     } else {
       setRoofCoordinates(null);
-      setRoofImage(null);
+    }
+
+    if (ridgeFeature) {
+      setRidgeLineCoordinates(ridgeFeature.geometry.coordinates);
+    } else {
+      setRidgeLineCoordinates(null);
     }
   };
 
-  // const captureRoofImage = () => {
-  //   if (!map.current) return;
-
-  //   setIsCapturingImage(true);
-
-  //   try {
-  //     // Get the canvas from the map
-  //     const canvas = map.current.getCanvas();
-
-  //     // Create a new canvas with reduced size
-  //     const maxWidth = 800; // Reduced from full size
-  //     const maxHeight = 600; // Reduced from full size
-
-  //     const newCanvas = document.createElement("canvas");
-  //     const ctx = newCanvas.getContext("2d");
-
-  //     // Calculate scaling to maintain aspect ratio
-  //     const scale = Math.min(
-  //       maxWidth / canvas.width,
-  //       maxHeight / canvas.height
-  //     );
-
-  //     newCanvas.width = canvas.width * scale;
-  //     newCanvas.height = canvas.height * scale;
-
-  //     // Draw the scaled image
-  //     ctx.drawImage(canvas, 0, 0, newCanvas.width, newCanvas.height);
-
-  //     // Convert canvas to blob
-  //     canvas.toBlob(
-  //       (blob) => {
-  //         if (blob) {
-  //           // Convert blob to base64
-  //           const reader = new FileReader();
-  //           reader.onloadend = () => {
-  //             setRoofImage(reader.result);
-  //             setIsCapturingImage(false);
-  //             // Toast notification would go here
-  //           };
-  //           reader.readAsDataURL(blob);
-  //         } else {
-  //           setIsCapturingImage(false);
-  //           // Error toast would go here
-  //         }
-  //       },
-  //       "image/png",
-  //       0.8
-  //     );
-  //   } catch (error) {
-  //     console.error("Error capturing image:", error);
-  //     setIsCapturingImage(false);
-  //     // Error toast would go here
-  //   }
-  // };
-
-  // Replace your captureRoofImage function with this optimized version
   const captureRoofImage = () => {
     if (!map.current) return;
 
     setIsCapturingImage(true);
 
     try {
-      // Get the canvas from the map
       const canvas = map.current.getCanvas();
 
-      // Create a new canvas with reduced size
-      const maxWidth = 800; // Reduced from full size
-      const maxHeight = 600; // Reduced from full size
+      if (canvas.width === 0 || canvas.height === 0) {
+        console.error("Canvas size is zero!");
+        setIsCapturingImage(false);
+        return;
+      }
+
+      const maxWidth = 800;
+      const maxHeight = 600;
 
       const newCanvas = document.createElement("canvas");
       const ctx = newCanvas.getContext("2d");
+      if (!ctx) {
+        console.error("Failed to get canvas context");
+        setIsCapturingImage(false);
+        return;
+      }
 
-      // Calculate scaling to maintain aspect ratio
       const scale = Math.min(
         maxWidth / canvas.width,
         maxHeight / canvas.height
@@ -257,27 +240,24 @@ const App = () => {
       newCanvas.width = canvas.width * scale;
       newCanvas.height = canvas.height * scale;
 
-      // Draw the scaled image
       ctx.drawImage(canvas, 0, 0, newCanvas.width, newCanvas.height);
 
-      // Convert to blob with higher compression
       newCanvas.toBlob(
         (blob) => {
           if (blob) {
-            // Convert blob to base64
             const reader = new FileReader();
             reader.onloadend = () => {
               setRoofImage(reader.result);
               setIsCapturingImage(false);
-              console.log("Image size (bytes):", reader.result.length);
             };
             reader.readAsDataURL(blob);
           } else {
+            console.error("Failed to create image blob.");
             setIsCapturingImage(false);
           }
         },
-        "image/jpeg", // Use JPEG instead of PNG for better compression
-        0.7 // Reduced quality for smaller file size
+        "image/jpeg",
+        0.7
       );
     } catch (error) {
       console.error("Error capturing image:", error);
@@ -355,20 +335,15 @@ const App = () => {
     setSubmitStatus("");
 
     const submitData = {
-      // Contact information
       customerName: customerName.trim(),
       customerEmail: customerEmail.trim(),
       customerPhone: customerPhone.trim(),
-
-      // Address and roof data
       address: selectedAddress,
       roofCoordinates: JSON.stringify(roofCoordinates),
+      ridgeLine: JSON.stringify(ridgeLineCoordinates),
       timestamp: new Date().toISOString(),
-      mapCenter: JSON.stringify({
-        lng: parseFloat(lng),
-        lat: parseFloat(lat),
-      }),
-      roofImage: roofImage || "", // Include the base64 image data
+      mapCenter: JSON.stringify({ lng: parseFloat(lng), lat: parseFloat(lat) }),
+      roofImage: roofImage || "",
       hasImage: roofImage ? "true" : "false",
     };
 
@@ -494,18 +469,6 @@ const App = () => {
             {lng}, {lat}
           </div>
         </div>
-
-        {/* Capture Image Button */}
-        {/* <div className="absolute top-2 sm:top-4 right-2 sm:right-4 ">
-          <button
-            onClick={captureRoofImage}
-            disabled={isCapturingImage}
-            className="flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm bg-blue-600 text-white rounded shadow-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
-          >
-            <Camera className="h-3 w-3 sm:h-4 sm:w-4" />
-            {isCapturingImage ? "Capturing..." : "Capture"}
-          </button>
-        </div> */}
       </div>
 
       {/* Bottom Controls */}
@@ -528,13 +491,20 @@ const App = () => {
         )}
 
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
-          <button
-            onClick={clearDrawing}
+          {/* button draw roof area */}
+          {/* <button
+            onClick={() => draw.current.changeMode("draw_polygon")}
             className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base bg-gray-600 text-white rounded-lg hover:bg-gray-700 active:bg-gray-800 transition-colors"
           >
-            <Trash2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Clear Drawing</span>
-            <span className="sm:hidden">Clear</span>
+            Draw Roof Area
+          </button> */}
+
+          {/* button draw ridge line */}
+          <button
+            onClick={() => draw.current.changeMode("draw_line_string")}
+            className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+          >
+            Draw Ridge Line
           </button>
 
           <button
@@ -573,6 +543,15 @@ const App = () => {
                 <span className="sm:hidden">Submit</span>
               </>
             )}
+          </button>
+
+          <button
+            onClick={clearDrawing}
+            className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base bg-gray-600 text-white rounded-lg hover:bg-gray-700 active:bg-gray-800 transition-colors"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Clear Drawing</span>
+            <span className="sm:hidden">Clear</span>
           </button>
         </div>
 
