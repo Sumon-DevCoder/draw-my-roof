@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import mapboxgl from "mapbox-gl";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
+import * as turf from "@turf/turf";
 
 // Import CSS files
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -37,6 +38,7 @@ const App = () => {
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [roofArea, setRoofArea] = useState(null);
 
   // Replace with your actual Mapbox token
   const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -70,42 +72,6 @@ const App = () => {
         trash: true,
       },
       defaultMode: "draw_polygon",
-      // styles: [
-      //   // Polygon stroke
-      //   {
-      //     id: "gl-draw-polygon-stroke-active",
-      //     type: "line",
-      //     filter: ["all", ["==", "$type", "Polygon"], ["!=", "mode", "static"]],
-      //     paint: {
-      //       "line-color": "#e60000",
-      //       "line-width": 4,
-      //     },
-      //   },
-      //   // Polygon points
-      //   {
-      //     id: "gl-draw-polygon-and-line-vertex-active",
-      //     type: "circle",
-      //     filter: ["all", ["==", "meta", "vertex"], ["==", "$type", "Point"]],
-      //     paint: {
-      //       "circle-radius": 5,
-      //       "circle-color": "#e60000",
-      //     },
-      //   },
-      //   // ✅ Ridge line (LineString) stroke
-      //   {
-      //     id: "gl-draw-line-stroke-active",
-      //     type: "line",
-      //     filter: [
-      //       "all",
-      //       ["==", "$type", "LineString"],
-      //       ["!=", "mode", "static"],
-      //     ],
-      //     paint: {
-      //       "line-color": "#00cc66", // 🟢 Green ridge line
-      //       "line-width": 3,
-      //     },
-      //   },
-      // ],
 
       styles: [
         // 🟥 Polygon stroke (red border)
@@ -196,8 +162,14 @@ const App = () => {
 
     if (polygonFeature) {
       setRoofCoordinates(polygonFeature.geometry.coordinates[0]);
+
+      // Calculate area in square meters
+      const polygon = turf.polygon(polygonFeature.geometry.coordinates);
+      const area = turf.area(polygon); // Area in square meters
+      setRoofArea(area.toFixed(2)); // Store area as a string (formatted to 2 decimal places)
     } else {
       setRoofCoordinates(null);
+      setRoofArea(null); // Reset roof area if there's no polygon
     }
 
     if (ridgeFeature) {
@@ -206,64 +178,6 @@ const App = () => {
       setRidgeLineCoordinates(null);
     }
   };
-
-  // const captureRoofImage = () => {
-  //   if (!map.current) return;
-
-  //   setIsCapturingImage(true);
-
-  //   try {
-  //     const canvas = map.current.getCanvas();
-
-  //     if (canvas.width === 0 || canvas.height === 0) {
-  //       console.error("Canvas size is zero!");
-  //       setIsCapturingImage(false);
-  //       return;
-  //     }
-
-  //     const maxWidth = 800;
-  //     const maxHeight = 600;
-
-  //     const newCanvas = document.createElement("canvas");
-  //     const ctx = newCanvas.getContext("2d");
-  //     if (!ctx) {
-  //       console.error("Failed to get canvas context");
-  //       setIsCapturingImage(false);
-  //       return;
-  //     }
-
-  //     const scale = Math.min(
-  //       maxWidth / canvas.width,
-  //       maxHeight / canvas.height
-  //     );
-
-  //     newCanvas.width = canvas.width * scale;
-  //     newCanvas.height = canvas.height * scale;
-
-  //     ctx.drawImage(canvas, 0, 0, newCanvas.width, newCanvas.height);
-
-  //     newCanvas.toBlob(
-  //       (blob) => {
-  //         if (blob) {
-  //           const reader = new FileReader();
-  //           reader.onloadend = () => {
-  //             setRoofImage(reader.result);
-  //             setIsCapturingImage(false);
-  //           };
-  //           reader.readAsDataURL(blob);
-  //         } else {
-  //           console.error("Failed to create image blob.");
-  //           setIsCapturingImage(false);
-  //         }
-  //       },
-  //       "image/jpeg",
-  //       0.7
-  //     );
-  //   } catch (error) {
-  //     console.error("Error capturing image:", error);
-  //     setIsCapturingImage(false);
-  //   }
-  // };
 
   const captureRoofImage = () => {
     if (!map.current) return;
@@ -399,19 +313,6 @@ const App = () => {
     setIsSubmitting(true);
     setSubmitStatus("");
 
-    // const submitData = {
-    //   customerName: customerName.trim(),
-    //   customerEmail: customerEmail.trim(),
-    //   customerPhone: customerPhone.trim(),
-    //   address: selectedAddress,
-    //   roofCoordinates: JSON.stringify(roofCoordinates),
-    //   ridgeLine: JSON.stringify(ridgeLineCoordinates),
-    //   timestamp: new Date().toISOString(),
-    //   mapCenter: JSON.stringify({ lng: parseFloat(lng), lat: parseFloat(lat) }),
-    //   roofImage: roofImage || "",
-    //   hasImage: roofImage ? "true" : "false",
-    // };
-
     const submitData = {
       customerName: customerName.trim(),
       customerEmail: customerEmail.trim(),
@@ -419,6 +320,7 @@ const App = () => {
       address: selectedAddress,
       roofCoordinates: JSON.stringify(roofCoordinates),
       ridgeLine: JSON.stringify(ridgeLineCoordinates),
+      roofArea: roofArea || "", // Include roof area in the data
       timestamp: new Date().toISOString(),
       mapCenter: JSON.stringify({ lng: parseFloat(lng), lat: parseFloat(lat) }),
       roofImage: roofImage || "",
@@ -469,7 +371,7 @@ const App = () => {
         </h1>
 
         {/* Contact Information */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3 sm:mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-3 sm:mb-4">
           <div className="relative">
             <input
               type="text"
@@ -499,6 +401,15 @@ const App = () => {
               className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pl-8 sm:pl-10"
             />
             <Phone className="absolute left-2 sm:left-3 top-2 sm:top-2.5 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+          </div>
+          <div className="relative">
+            <input
+              type="number"
+              placeholder="Approximate Roof Area (m²)"
+              value={roofArea}
+              onChange={(e) => setRoofArea(e.target.value)}
+              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
           </div>
         </div>
 
