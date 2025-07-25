@@ -207,6 +207,64 @@ const App = () => {
     }
   };
 
+  // const captureRoofImage = () => {
+  //   if (!map.current) return;
+
+  //   setIsCapturingImage(true);
+
+  //   try {
+  //     const canvas = map.current.getCanvas();
+
+  //     if (canvas.width === 0 || canvas.height === 0) {
+  //       console.error("Canvas size is zero!");
+  //       setIsCapturingImage(false);
+  //       return;
+  //     }
+
+  //     const maxWidth = 800;
+  //     const maxHeight = 600;
+
+  //     const newCanvas = document.createElement("canvas");
+  //     const ctx = newCanvas.getContext("2d");
+  //     if (!ctx) {
+  //       console.error("Failed to get canvas context");
+  //       setIsCapturingImage(false);
+  //       return;
+  //     }
+
+  //     const scale = Math.min(
+  //       maxWidth / canvas.width,
+  //       maxHeight / canvas.height
+  //     );
+
+  //     newCanvas.width = canvas.width * scale;
+  //     newCanvas.height = canvas.height * scale;
+
+  //     ctx.drawImage(canvas, 0, 0, newCanvas.width, newCanvas.height);
+
+  //     newCanvas.toBlob(
+  //       (blob) => {
+  //         if (blob) {
+  //           const reader = new FileReader();
+  //           reader.onloadend = () => {
+  //             setRoofImage(reader.result);
+  //             setIsCapturingImage(false);
+  //           };
+  //           reader.readAsDataURL(blob);
+  //         } else {
+  //           console.error("Failed to create image blob.");
+  //           setIsCapturingImage(false);
+  //         }
+  //       },
+  //       "image/jpeg",
+  //       0.7
+  //     );
+  //   } catch (error) {
+  //     console.error("Error capturing image:", error);
+  //     setIsCapturingImage(false);
+  //   }
+  // };
+
   const captureRoofImage = () => {
     if (!map.current) return;
 
@@ -215,46 +273,53 @@ const App = () => {
     try {
       const canvas = map.current.getCanvas();
 
-      if (canvas.width === 0 || canvas.height === 0) {
-        console.error("Canvas size is zero!");
-        setIsCapturingImage(false);
-        return;
-      }
-
       const maxWidth = 800;
       const maxHeight = 600;
-
-      const newCanvas = document.createElement("canvas");
-      const ctx = newCanvas.getContext("2d");
-      if (!ctx) {
-        console.error("Failed to get canvas context");
-        setIsCapturingImage(false);
-        return;
-      }
-
       const scale = Math.min(
         maxWidth / canvas.width,
         maxHeight / canvas.height
       );
 
+      const newCanvas = document.createElement("canvas");
+      const ctx = newCanvas.getContext("2d");
+
       newCanvas.width = canvas.width * scale;
       newCanvas.height = canvas.height * scale;
 
-      ctx.drawImage(canvas, 0, 0, newCanvas.width, newCanvas.height);
+      ctx?.drawImage(canvas, 0, 0, newCanvas.width, newCanvas.height);
 
       newCanvas.toBlob(
-        (blob) => {
+        async (blob) => {
           if (blob) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              setRoofImage(reader.result);
-              setIsCapturingImage(false);
-            };
-            reader.readAsDataURL(blob);
+            try {
+              const cloudinaryURL = import.meta.env.VITE_CLOUDINARY_UPLOAD_URL;
+              const uploadPreset = import.meta.env
+                .VITE_CLOUDINARY_UPLOAD_PRESET;
+
+              const formData = new FormData();
+              formData.append("file", blob);
+              formData.append("upload_preset", uploadPreset);
+
+              const response = await fetch(cloudinaryURL, {
+                method: "POST",
+                body: formData,
+              });
+
+              const data = await response.json();
+              console.log("data img", data);
+              if (data.secure_url) {
+                setRoofImage(data.secure_url); // ✅ Save image URL
+              } else {
+                console.error("Cloudinary upload failed:", data);
+              }
+            } catch (err) {
+              console.error("Image upload error:", err);
+            }
           } else {
-            console.error("Failed to create image blob.");
-            setIsCapturingImage(false);
+            console.error("Failed to capture image.");
           }
+
+          setIsCapturingImage(false);
         },
         "image/jpeg",
         0.7
@@ -333,6 +398,19 @@ const App = () => {
 
     setIsSubmitting(true);
     setSubmitStatus("");
+
+    // const submitData = {
+    //   customerName: customerName.trim(),
+    //   customerEmail: customerEmail.trim(),
+    //   customerPhone: customerPhone.trim(),
+    //   address: selectedAddress,
+    //   roofCoordinates: JSON.stringify(roofCoordinates),
+    //   ridgeLine: JSON.stringify(ridgeLineCoordinates),
+    //   timestamp: new Date().toISOString(),
+    //   mapCenter: JSON.stringify({ lng: parseFloat(lng), lat: parseFloat(lat) }),
+    //   roofImage: roofImage || "",
+    //   hasImage: roofImage ? "true" : "false",
+    // };
 
     const submitData = {
       customerName: customerName.trim(),
